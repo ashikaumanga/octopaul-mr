@@ -42,6 +42,7 @@ public class Prueba {
 		HashMap<String,HashMap<Long, HashMap<Long, Float>>>  hashMap = createData(dimensions, numUsers,numItems,ratingsPerUser);
 		
 		RecommendationGenerator generator = new RecommendationGenerator(hashMap, ponderations, algorithms);
+		
 		//generator.showInfo();
 		HashMap<Long,Float> recommendations = generator.getRecommendations(myUser, 5);
 		Iterator<Long> recIterator = recommendations.keySet().iterator();
