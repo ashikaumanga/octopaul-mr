@@ -56,7 +56,7 @@ public class RecommendationGenerator {
 	private int neighbors; // Number of neighbors to consider in a NN-Algorithm.
 	
 	// Recommender instance:
-	private Recommender recommender;
+	public Recommender recommender;
 	
 	/**
 	 * Contructor for RecommendationGenerator
@@ -88,8 +88,8 @@ public class RecommendationGenerator {
 			ponderations.put(dimensions[i], dimensionPonderations[i]);
 			similarityAlgorithms.put(dimensions[i],dimensionSimAlgorithms[i]);
 		}
-		new RecommendationGenerator(hashMapData, ponderations, similarityAlgorithms);
-		
+		configure(hashMapData, ponderations, similarityAlgorithms);
+		refresh();		
 	}
 	
 	/**
@@ -102,6 +102,13 @@ public class RecommendationGenerator {
 	public RecommendationGenerator(	HashMap<String, HashMap<Long, HashMap<Long, Float>>> hashMapData,
 									HashMap<String, Double> ponderations,
 									HashMap<String, String> similarityAlgorithms) throws Exception{
+		configure(hashMapData, ponderations, similarityAlgorithms);
+		refresh();		
+	}
+	
+	private void configure 	(HashMap<String, HashMap<Long, HashMap<Long, Float>>> hashMapData,
+			HashMap<String, Double> ponderations,HashMap<String, String> similarityAlgorithms) 
+			throws Exception {
 		log.info("Starting the recommendation engine.");		
 		// Check that the number of dimensions is correct.
 		if( (hashMapData.size()!=ponderations.size() || similarityAlgorithms.size()!=ponderations.size() ))
@@ -139,8 +146,6 @@ public class RecommendationGenerator {
 		similarityIntMap.put(COSINE,6);
 		this.neighbors=defaultNeighbors;
 		this.refreshed=false;
-		refresh();
-				
 	}
 	
 	/**
@@ -174,12 +179,11 @@ public class RecommendationGenerator {
 			}		
 			log.info("All inner instances created successfully.");
 			log.info("Creating the Recommender instance:");
-			this.recommender = new CachingRecommender(new MultidimensionalRecommender(dataModels, similarities,
+			recommender = new CachingRecommender(new MultidimensionalRecommender(dataModels, similarities,
 																							neighborhoods, ponderations, 
 																							dimensions,log));
-			
-			this.refreshed=true;
-			this.lastModified=Calendar.getInstance().getTimeInMillis();
+			refreshed=true;
+			lastModified=Calendar.getInstance().getTimeInMillis();
 			log.info("Recommendation engine refreshed: ready to infer recommendations.");
 		}
 	}
@@ -193,6 +197,7 @@ public class RecommendationGenerator {
 	 */
 	public HashMap<Long,Float> getRecommendations(long userID, int numOfRecommendations) throws TasteException{
 		log.info("Getting recommendations. This step may take a while...");
+		System.out.println(recommender);
 		List<RecommendedItem> recommendations = recommender.recommend(userID, numOfRecommendations);
 		HashMap<Long,Float> hashMap = new HashMap<Long, Float>();
 		if(recommendations.isEmpty()){
@@ -377,6 +382,10 @@ public class RecommendationGenerator {
 		case 6:  log.info("Uncentered cosine UserSimilarity instance created successfully.");return new UncenteredCosineSimilarity(dataModel);
 		default: log.warn("Default value: Pearson correlation UserSimilarity instance returned.");return new PearsonCorrelationSimilarity(dataModel);
 		}
+	}
+	
+	public Logger getLog() {
+		return log;
 	}
 
 }
