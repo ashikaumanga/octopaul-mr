@@ -73,6 +73,8 @@ public class RecommendationGenerator {
 		if(dimensions.length != mapData.length)
 			throw new Exception("We need to have the same number of dimensions for every" +
 					" input argument of the constructor method.");
+		if(dimensions.length < 1)
+			throw new Exception("Dimensions have to be greater than zero");
 		
 		// Identify the dimensions.
 		this.dimensions = dimensions;
@@ -98,7 +100,8 @@ public class RecommendationGenerator {
 	 * @throws Exception
 	 */
 	public RecommendationGenerator(	HashMap<String,Object> dimensionData) throws Exception{
-		
+		if(dimensionData.size() < 1)
+			throw new Exception("Dimensions have to be greater than zero");
 		// Identify the dimensions.
 		this.dimensions = new String[dimensionData.size()];
 		int k = 0;
@@ -128,7 +131,9 @@ public class RecommendationGenerator {
 		if(dimensions.length != mapData.length || dimensions.length != dimensionPonderations.length
 				|| dimensions.length != dimensionSimAlgorithms.length)
 			throw new Exception("We need to have the same number of dimensions for every" +
-					" input argument of the constructor method.");
+					" input array of the constructor method.");
+		if(dimensions.length < 1)
+			throw new Exception("Dimensions have to be greater than zero");
 		
 		// Identify the dimensions.
 		this.dimensions = dimensions;
@@ -161,6 +166,8 @@ public class RecommendationGenerator {
 				dimensionPonderations.length != dimensionSimAlgorithms.length)
 			throw new Exception("We need to have the same number of dimensions for every" +
 					" input argument of the constructor method.");
+		if(dimensionPonderations.length < 1)
+			throw new Exception("Dimensions have to be greater than zero");
 		
 		// Identify the dimensions.			
 		dimensions=new String[hashMapData.size()];
@@ -191,6 +198,12 @@ public class RecommendationGenerator {
 	public RecommendationGenerator(	HashMap<String, Object> hashMapData,
 									HashMap<String, Double> ponderations,
 									HashMap<String, String> similarityAlgorithms) throws Exception{
+		if(ponderations.size() != hashMapData.size() || 
+				ponderations.size() != similarityAlgorithms.size())
+			throw new Exception("We need to have the same number of dimensions (size) for every" +
+					" input HashMap of the constructor method.");
+		if(ponderations.size() < 1)
+			throw new Exception("Dimensions have to be greater than zero");
 		configure(hashMapData, ponderations, similarityAlgorithms);
 		refresh();		
 	}
@@ -201,8 +214,8 @@ public class RecommendationGenerator {
 		log.info("Starting the recommendation engine.");		
 		// Check that the number of dimensions is correct.
 		if( (mapData.size()!=ponderations.size() || similarityAlgorithms.size()!=ponderations.size() ))
-				throw new Exception("We need to have the same number of dimensions for every " +
-						"input argument of the constructor method.");
+				throw new Exception("We need to have the same number of dimensions (size) for every " +
+						"input HashMap of the constructor method.");
 		//Check that mapData values corresponds to DataModel or HashMap<Long, HashMap<Long, Float>> instances
 		for(Object data : mapData.values()) {
 			if(!(data instanceof DataModel)) {
@@ -329,8 +342,8 @@ public class RecommendationGenerator {
 	 * @param itemID : item for which we want to remove a rating.
 	 */
 	public void removeRating(String dim, long userID, long itemID){
-		if(dimensionData.containsKey(dim)){//
-			throw new IllegalArgumentException("This dimension does not exist.");
+		if(!dimensionData.containsKey(dim)){//
+			throw new IllegalArgumentException("Dimension "+dim+" does not exist.");
 		}
 		Object map = dimensionData.get(dim);
 		if(! (map instanceof HashMap)) {
@@ -339,13 +352,51 @@ public class RecommendationGenerator {
 		HashMap<Long,HashMap<Long,Float>> hashMapByDimension = (HashMap<Long,HashMap<Long,Float>>) map;		
 		HashMap<Long,Float> hashMapByUid = (HashMap<Long,Float>) hashMapByDimension.get(userID);
 		if(hashMapByUid==null){//
-			throw new IllegalArgumentException("This user has not rated this dimension.");
+			log.error("The user "+userID+" has not rated any item in dimension "+dim+
+					" so it is impossible to remove rating");
+			return;
 		}
-		hashMapByUid.remove(itemID);
+		if(hashMapByUid.remove(itemID) == null) {
+			log.error("The user "+userID+" has not rated item "+itemID+" in dimension "+dim+
+					" so it is impossible to remove rating");
+			return;
+		}
 		//hashMapByDimension.put(userID, hashMapByUid);
 		//hashMapData.put(dim, hashMapByDimension);
 		this.refreshed=false;
 		log.info("You have removed the rating of item number "+itemID+" for user number "+userID+" at the dimension: \""+dim+"\".");
+		log.info("You may refresh now.");
+	}
+	
+	public void removeRating(HashMap<String, HashMap<Long,HashMap<Long,Float>>> mapDataToDelete){
+		for(String dimension : mapDataToDelete.keySet()) {
+			if(!dimensionData.containsKey(dimension)){//
+				log.error("Dimension "+dimension+
+						" does not exist and its refer data will be not loaded.");
+			}
+			HashMap<Long,HashMap<Long,Float>> mapDimensionDataToDelete = mapDataToDelete.get(dimension);
+			HashMap<Long,HashMap<Long,Float>> mapDimensionData = 
+					(HashMap<Long,HashMap<Long,Float>>)dimensionData.get(dimension);			
+			for(Long userID : mapDimensionDataToDelete.keySet()) {				
+				HashMap<Long,Float> hashMapByUid = (HashMap<Long,Float>) mapDimensionData.get(userID);
+				HashMap<Long,Float> hashMapByUidToDelete = mapDimensionData.get(userID);
+				if(hashMapByUid != null){//new user
+					for(Long itemID : hashMapByUidToDelete.keySet()) {
+						if(hashMapByUid.remove(hashMapByUidToDelete.get(itemID)) == null) {
+							log.error("The user "+userID+" has not rated item "+itemID+" in dimension "+dimension+
+									" so it is impossible to remove rating");
+							return;
+						}
+					}					
+				} else {
+					log.error("The user "+userID+" has not rated any item in dimension "+dimension+
+							" so it is impossible to remove rating");
+					continue;
+				}
+			}
+		}
+		this.refreshed=false;
+		log.info("You have put ratings of the HashMap input.");
 		log.info("You may refresh now.");
 	}
 	
@@ -357,10 +408,13 @@ public class RecommendationGenerator {
 	 * @param value : value of the rating.
 	 */
 	public void putRating(String dim, long userID, long itemID, float value){
-		if(dimensionData.containsKey(dim)){//
-			throw new IllegalArgumentException("This dimension does not exist.");
+		if(!dimensionData.containsKey(dim)){//
+			throw new IllegalArgumentException("Dimension "+dim+" does not exist.");
 		}
 		Object map = dimensionData.get(dim);
+		if(map == null) {
+			map = new HashMap<Long,HashMap<Long,Float>>();
+		}
 		if(! (map instanceof HashMap)) {
 			throw new IllegalArgumentException("This dimension uses Data Model directly and not hash Map");
 		}
@@ -378,6 +432,33 @@ public class RecommendationGenerator {
 		//hashMapData.put(dim, hashMapByDimension);
 		this.refreshed=false;
 		log.info("You have put the rating of "+value+" to item number "+itemID+" for user number "+userID+" at the dimension: \""+dim+"\".");
+		log.info("You may refresh now.");
+	}
+	
+	public void putRating(HashMap<String, HashMap<Long,HashMap<Long,Float>>> mapDataToAdd) {
+		for(String dimension : mapDataToAdd.keySet()) {
+			if(!dimensionData.containsKey(dimension)){//
+				log.error("Dimension "+dimension+
+						" does not exist and its refer data will be not loaded.");
+			}
+			HashMap<Long,HashMap<Long,Float>> mapDimensionDataToAdd = mapDataToAdd.get(dimension);
+			HashMap<Long,HashMap<Long,Float>> mapDimensionData = 
+					(HashMap<Long,HashMap<Long,Float>>)dimensionData.get(dimension);
+			if(mapDimensionData == null) {
+				dimensionData.put(dimension, mapDimensionDataToAdd);
+				continue;
+			}
+			for(Long userID : mapDimensionDataToAdd.keySet()) {				
+				HashMap<Long,Float> hashMapByUid = (HashMap<Long,Float>) mapDimensionData.get(userID);
+				HashMap<Long,Float> hashMapByUidToAdd = mapDimensionData.get(userID);
+				if(hashMapByUid != null){//new user
+					hashMapByUid.putAll(hashMapByUidToAdd);
+				} else
+					mapDimensionData.put(userID, hashMapByUidToAdd);
+			}
+		}
+		this.refreshed=false;
+		log.info("You have put ratings of the HashMap input.");
 		log.info("You may refresh now.");
 	}
 	
@@ -427,7 +508,7 @@ public class RecommendationGenerator {
 	 */
 	private void checkHashMap(HashMap hashMap){
 		log.info("Checking if the input hash map data table has the correct dimensions.");
-		if(hashMap.size()==0){
+		if(hashMap == null || hashMap.size()==0){
 			log.info("Empty hash map");
 			return;
 		}
