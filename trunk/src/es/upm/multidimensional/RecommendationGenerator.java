@@ -368,24 +368,35 @@ public class RecommendationGenerator {
 		log.info("You may refresh now.");
 	}
 	
-	public void removeRating(HashMap<String, HashMap<Long,HashMap<Long,Float>>> mapDataToDelete){
+	public void removeRating(HashMap<String, HashMap<Long,List<Long>>> mapDataToDelete){
 		for(String dimension : mapDataToDelete.keySet()) {
 			if(!dimensionData.containsKey(dimension)){//
 				log.error("Dimension "+dimension+
-						" does not exist and its refer data will be not loaded.");
+						" does not exist and its refer data will be not removed.");
+				continue;
 			}
-			HashMap<Long,HashMap<Long,Float>> mapDimensionDataToDelete = mapDataToDelete.get(dimension);
-			HashMap<Long,HashMap<Long,Float>> mapDimensionData = 
-					(HashMap<Long,HashMap<Long,Float>>)dimensionData.get(dimension);			
+			HashMap<Long,List<Long>> mapDimensionDataToDelete = mapDataToDelete.get(dimension);
+			Object map = dimensionData.get(dimension);
+			if(map == null) {
+				log.error("The hashMap of the dimension "+dimension+" is null so its refer data "
+						+"will be not removed.");
+				continue;
+			}
+			if(! (map instanceof HashMap)) {
+				log.error("The dimension "+dimension+" uses Data Model directly and not hash Map so" +
+						" its refer data will be not removed.");
+				continue;
+			}			
+			HashMap<Long,HashMap<Long,Float>> mapDimensionData = (HashMap<Long,HashMap<Long,Float>>) map;			
 			for(Long userID : mapDimensionDataToDelete.keySet()) {				
 				HashMap<Long,Float> hashMapByUid = (HashMap<Long,Float>) mapDimensionData.get(userID);
-				HashMap<Long,Float> hashMapByUidToDelete = mapDimensionData.get(userID);
-				if(hashMapByUid != null){//new user
-					for(Long itemID : hashMapByUidToDelete.keySet()) {
-						if(hashMapByUid.remove(hashMapByUidToDelete.get(itemID)) == null) {
+				List<Long> hashMapByUidToDelete = mapDimensionDataToDelete.get(userID);
+				if(hashMapByUid != null){
+					for(Long itemID : hashMapByUidToDelete) {
+						if(hashMapByUid.remove(itemID) == null) {
 							log.error("The user "+userID+" has not rated item "+itemID+" in dimension "+dimension+
 									" so it is impossible to remove rating");
-							return;
+							continue;
 						}
 					}					
 				} else {
@@ -396,7 +407,50 @@ public class RecommendationGenerator {
 			}
 		}
 		this.refreshed=false;
-		log.info("You have put ratings of the HashMap input.");
+		log.info("You have removed ratings of the HashMap input.");
+		log.info("You may refresh now.");
+	}
+	
+	public void removeRatingWithValues(HashMap<String, HashMap<Long,HashMap<Long,Float>>> mapDataToDelete){
+		for(String dimension : mapDataToDelete.keySet()) {
+			if(!dimensionData.containsKey(dimension)){//
+				log.error("Dimension "+dimension+
+						" does not exist and its refer data will be not removed.");
+				continue;
+			}
+			HashMap<Long,HashMap<Long,Float>> mapDimensionDataToDelete = mapDataToDelete.get(dimension);
+			Object map = dimensionData.get(dimension);
+			if(map == null) {
+				log.error("The hashMap of the dimension "+dimension+" is null so its refer data "
+						+"will be not removed.");
+				continue;
+			}
+			if(! (map instanceof HashMap)) {
+				log.error("The dimension "+dimension+" uses Data Model directly and not hash Map so" +
+						" its refer data will be not removed.");
+				continue;
+			}			
+			HashMap<Long,HashMap<Long,Float>> mapDimensionData = (HashMap<Long,HashMap<Long,Float>>) map;			
+			for(Long userID : mapDimensionDataToDelete.keySet()) {				
+				HashMap<Long,Float> hashMapByUid = (HashMap<Long,Float>) mapDimensionData.get(userID);
+				HashMap<Long,Float> hashMapByUidToDelete = mapDimensionDataToDelete.get(userID);
+				if(hashMapByUid != null){
+					for(Long itemID : hashMapByUidToDelete.keySet()) {
+						if(hashMapByUid.remove(itemID) == null) {
+							log.error("The user "+userID+" has not rated item "+itemID+" in dimension "+dimension+
+									" so it is impossible to remove rating");
+							continue;
+						}
+					}					
+				} else {
+					log.error("The user "+userID+" has not rated any item in dimension "+dimension+
+							" so it is impossible to remove rating");
+					continue;
+				}
+			}
+		}
+		this.refreshed=false;
+		log.info("You have removed ratings of the HashMap input.");
 		log.info("You may refresh now.");
 	}
 	
@@ -440,17 +494,23 @@ public class RecommendationGenerator {
 			if(!dimensionData.containsKey(dimension)){//
 				log.error("Dimension "+dimension+
 						" does not exist and its refer data will be not loaded.");
+				continue;
 			}
 			HashMap<Long,HashMap<Long,Float>> mapDimensionDataToAdd = mapDataToAdd.get(dimension);
-			HashMap<Long,HashMap<Long,Float>> mapDimensionData = 
-					(HashMap<Long,HashMap<Long,Float>>)dimensionData.get(dimension);
-			if(mapDimensionData == null) {
+			Object map = dimensionData.get(dimension);
+			if(map == null) {
 				dimensionData.put(dimension, mapDimensionDataToAdd);
 				continue;
 			}
+			if(! (map instanceof HashMap)) {
+				log.error("The dimension "+dimension+" uses Data Model directly and not hash Map so" +
+						" its refer data will be not loaded.");
+				continue;
+			}
+			HashMap<Long,HashMap<Long,Float>> mapDimensionData = (HashMap<Long,HashMap<Long,Float>>) map;
 			for(Long userID : mapDimensionDataToAdd.keySet()) {				
+				HashMap<Long,Float> hashMapByUidToAdd = mapDimensionDataToAdd.get(userID);
 				HashMap<Long,Float> hashMapByUid = (HashMap<Long,Float>) mapDimensionData.get(userID);
-				HashMap<Long,Float> hashMapByUidToAdd = mapDimensionData.get(userID);
 				if(hashMapByUid != null){//new user
 					hashMapByUid.putAll(hashMapByUidToAdd);
 				} else
