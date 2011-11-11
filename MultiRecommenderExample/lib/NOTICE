@@ -1,0 +1,25 @@
+// ------------------------------------------------------------------
+// NOTICE file corresponding to the section 4d of The Apache License,
+// Version 2.0, in this case for Commons Logging
+// ------------------------------------------------------------------
+
+This product includes/uses software(s) developed by 'The Apache Software Fundation'
+   Mahout Core 0.4 - SNAPSHOT
+
+   Commons Logging
+      Copyright 2001-2007 The Apache Software Foundation
+
+      This product includes/uses software(s) developed by 'an unknown organization'
+         - Unnamed - avalon-framework:avalon-framework:jar:4.1.3
+         - Unnamed - log4j:log4j:jar:1.2.12
+         - Unnamed - logkit:logkit:jar:1.0.1
+		 
+	
+This product includes/uses software(s) under the MIT License
+    SLF4J (Simple Logging Facade for Java)     Copyright (c) 2004-2008 QOS.ch 
+	    API-1.5.8
+		JCL-1.5.8
+		
+This product includes/uses software(s) under 'Apache Software Licence'
+    Uncommons-Maths-1.2	    © 2006 - 2009 Daniel W. Dyer
+
